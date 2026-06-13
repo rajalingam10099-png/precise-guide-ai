@@ -83,9 +83,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "AI-powered Tamil learning for children, English & Hindi speakers. Letters, words, pronunciation, quizzes." },
       { name: "author", content: "Kural AI" },
       { property: "og:title", content: "Kural AI — Learn Tamil with AI" },
-      { property: "og:description", content: "Learn Tamil letters, words and pronunciation with an AI tutor." },
+      { property: "og:description", content: "AI-powered Tamil learning for children, English & Hindi speakers. Letters, words, pronunciation, quizzes." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Kural AI — Learn Tamil with AI" },
+      { name: "twitter:description", content: "AI-powered Tamil learning for children, English & Hindi speakers. Letters, words, pronunciation, quizzes." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a911ecd2-2ac6-406b-9c49-8fe5013c3dd6/id-preview-9ad91e91--b10ad3b7-8a10-4a0e-b549-edcf070abc25.lovable.app-1781338647979.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a911ecd2-2ac6-406b-9c49-8fe5013c3dd6/id-preview-9ad91e91--b10ad3b7-8a10-4a0e-b549-edcf070abc25.lovable.app-1781338647979.png" },
     ],
     links: [
       {
