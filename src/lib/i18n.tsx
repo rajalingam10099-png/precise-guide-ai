@@ -1,4 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
+
+import { getProfile, setUiLang as setUiLangFn } from "@/lib/profile.functions";
+import { useAuth } from "@/lib/auth";
 
 // Multilingual support (Module 7). Interface languages per spec: English, Hindi.
 // Tamil is the content being taught.
@@ -129,6 +133,9 @@ const Ctx = createContext<I18nCtx | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<UiLang>("en");
+  const { ready, userId } = useAuth();
+  const fetchProfile = useServerFn(getProfile);
+  const persistLang = useServerFn(setUiLangFn);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -136,9 +143,20 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (saved === "en" || saved === "hi") setLangState(saved);
   }, []);
 
+  // Sync UI language from profiles once signed in.
+  useEffect(() => {
+    if (!ready || !userId) return;
+    fetchProfile()
+      .then((p) => {
+        if (p?.ui_lang === "en" || p?.ui_lang === "hi") setLangState(p.ui_lang);
+      })
+      .catch(() => {});
+  }, [ready, userId, fetchProfile]);
+
   const setLang = (l: UiLang) => {
     setLangState(l);
     if (typeof window !== "undefined") window.localStorage.setItem("kural.lang", l);
+    if (userId) persistLang({ data: { ui_lang: l } }).catch(() => {});
   };
 
   const t = (k: keyof typeof en) => dicts[lang][k] ?? en[k];
