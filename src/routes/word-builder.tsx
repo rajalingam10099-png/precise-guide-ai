@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { Check, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { wordPuzzles } from "@/data/tamil";
 import { useI18n } from "@/lib/i18n";
-import { speak } from "@/lib/speech";
+import { listWordPuzzles } from "@/lib/lessons.functions";
+import { getTtsProvider } from "@/services/tts";
+
+type Puzzle = { id: string; parts: string[]; answer: string; english: string; hindi: string; emoji: string };
 
 // Module 3: Word Builder. Flow per spec — display letters, user combines, validate, display correct word.
 export const Route = createFileRoute("/word-builder")({
@@ -20,9 +24,15 @@ export const Route = createFileRoute("/word-builder")({
 
 function WordBuilderScreen() {
   const { t } = useI18n();
+  const fetchPuzzles = useServerFn(listWordPuzzles);
+  const { data: wordPuzzles = [] } = useQuery({ queryKey: ["word_puzzles"], queryFn: () => fetchPuzzles() });
+  const puzzles = wordPuzzles as Puzzle[];
   const [idx, setIdx] = useState(0);
-  const puzzle = wordPuzzles[idx];
-  const shuffled = useMemo(() => [...puzzle.parts].sort(() => Math.random() - 0.5), [puzzle.id]);
+  const puzzle = puzzles[idx];
+  const shuffled = useMemo(
+    () => (puzzle ? [...puzzle.parts].sort(() => Math.random() - 0.5) : []),
+    [puzzle?.id],
+  );
   const [picked, setPicked] = useState<number[]>([]);
   const [status, setStatus] = useState<"idle" | "right" | "wrong">("idle");
 
@@ -40,18 +50,27 @@ function WordBuilderScreen() {
   }
 
   function check() {
+    if (!puzzle) return;
     if (builtWord === puzzle.answer) {
       setStatus("right");
-      speak(puzzle.answer);
+      void getTtsProvider().speak(puzzle.answer, "ta-IN");
     } else {
       setStatus("wrong");
     }
   }
 
   function nextPuzzle() {
-    setIdx((i) => (i + 1) % wordPuzzles.length);
+    setIdx((i) => (puzzles.length === 0 ? 0 : (i + 1) % puzzles.length));
     setPicked([]);
     setStatus("idle");
+  }
+
+  if (!puzzle) {
+    return (
+      <AppShell title={t("word_builder")}>
+        <div className="py-12 text-center text-muted-foreground">…</div>
+      </AppShell>
+    );
   }
 
   return (

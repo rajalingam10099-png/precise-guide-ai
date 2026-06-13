@@ -1,10 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { getQuizPool, type Difficulty, type LessonItem } from "@/data/tamil";
 import { useI18n } from "@/lib/i18n";
-import { recordQuizScore } from "@/lib/progress";
+import { listLessons } from "@/lib/lessons.functions";
+import { recordQuiz } from "@/lib/quiz.functions";
+
+type Difficulty = "easy" | "medium" | "hard";
+type LessonItem = {
+  id: string;
+  module: "uyir" | "mei";
+  letter: string;
+  word: string;
+  english: string;
+  hindi: string;
+  emoji: string;
+};
 
 // Screen 6 + Module 6: Quiz Mode. Easy/Medium/Hard. Flow: image -> question
 // -> options -> select -> validate -> result.
@@ -24,6 +37,8 @@ function QuizScreen() {
   const { t, lang } = useI18n();
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [seed, setSeed] = useState(0);
+  const fetchLessons = useServerFn(listLessons);
+  const { data: lessons = [] } = useQuery({ queryKey: ["lessons"], queryFn: () => fetchLessons() });
 
   if (!difficulty) {
     return (
@@ -52,6 +67,7 @@ function QuizScreen() {
         key={seed}
         difficulty={difficulty}
         lang={lang}
+        lessons={lessons as LessonItem[]}
         onExit={() => setDifficulty(null)}
         onRestart={() => setSeed((s) => s + 1)}
       />
@@ -59,14 +75,18 @@ function QuizScreen() {
   );
 }
 
-function QuizRound({ difficulty, lang, onExit, onRestart }: { difficulty: Difficulty; lang: "en" | "hi"; onExit: () => void; onRestart: () => void }) {
+function QuizRound({ difficulty, lang, lessons, onExit, onRestart }: { difficulty: Difficulty; lang: "en" | "hi"; lessons: LessonItem[]; onExit: () => void; onRestart: () => void }) {
   const { t } = useI18n();
-  const questions = useMemo(() => buildQuestions(difficulty), [difficulty]);
+  const persist = useServerFn(recordQuiz);
+  const questions = useMemo(() => buildQuestions(difficulty, lessons), [difficulty, lessons]);
   const [i, setI] = useState(0);
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
+  if (questions.length === 0) {
+    return <div className="py-12 text-center text-muted-foreground">…</div>;
+  }
   const q = questions[i];
 
   function choose(opt: LessonItem) {
@@ -77,7 +97,7 @@ function QuizRound({ difficulty, lang, onExit, onRestart }: { difficulty: Diffic
 
   function next() {
     if (i + 1 >= questions.length) {
-      recordQuizScore(difficulty, score, questions.length);
+      persist({ data: { difficulty, score, total: questions.length } }).catch(() => {});
       setDone(true);
       return;
     }
@@ -150,8 +170,14 @@ function QuizRound({ difficulty, lang, onExit, onRestart }: { difficulty: Diffic
   );
 }
 
-function buildQuestions(difficulty: Difficulty) {
-  const pool = getQuizPool(difficulty);
+function buildQuestions(difficulty: Difficulty, lessons: LessonItem[]) {
+  const pool =
+    difficulty === "easy"
+      ? lessons.filter((l) => l.module === "uyir")
+      : difficulty === "medium"
+      ? lessons.filter((l) => l.module === "mei")
+      : lessons;
+  if (pool.length < 4) return [];
   const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, QUIZ_LEN);
   return shuffled.map((answer) => {
     const distractors = pool

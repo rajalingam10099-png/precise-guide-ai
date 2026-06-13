@@ -1,12 +1,25 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Mic, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { meiEzhuthu, uyirEzhuthu, type LessonItem } from "@/data/tamil";
 import { useI18n } from "@/lib/i18n";
-import { markLessonComplete, recordPronunciationScore } from "@/lib/progress";
-import { isRecognitionSupported, listenOnce, scorePronunciation, speak } from "@/lib/speech";
+import { listLessons, markLessonComplete } from "@/lib/lessons.functions";
+import { submitPronunciation } from "@/lib/pronunciation.functions";
+import { getSpeechProvider } from "@/services/speech";
+import { getTtsProvider } from "@/services/tts";
+
+type LessonItem = {
+  id: string;
+  module: "uyir" | "mei";
+  letter: string;
+  word: string;
+  english: string;
+  hindi: string;
+  emoji: string;
+};
 
 // Screen 4: Lesson Screen. Implements Modules 1 (Uyir) and 2 (Mei).
 // Flow per requirements: show letter, image, AI tutor pronounces word, user
@@ -33,35 +46,54 @@ export const Route = createFileRoute("/lesson/$module")({
 function LessonScreen() {
   const { module } = Route.useParams();
   const { t, lang } = useI18n();
-  const items = useMemo<LessonItem[]>(() => (module === "uyir" ? uyirEzhuthu : meiEzhuthu), [module]);
+  const fetchLessons = useServerFn(listLessons);
+  const markComplete = useServerFn(markLessonComplete);
+  const submitPron = useServerFn(submitPronunciation);
+  const { data: all = [] } = useQuery({
+    queryKey: ["lessons"],
+    queryFn: () => fetchLessons(),
+  });
+  const items = useMemo<LessonItem[]>(
+    () => (all as LessonItem[]).filter((l) => l.module === module),
+    [all, module],
+  );
   const [idx, setIdx] = useState(0);
   const item = items[idx];
   const [feedback, setFeedback] = useState<{ score: number; ok: boolean; miss: string } | null>(null);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
 
-  useEffect(() => setSupported(isRecognitionSupported()), []);
+  useEffect(() => setSupported(getSpeechProvider().isSupported()), []);
   useEffect(() => {
+    if (!item) return;
     setFeedback(null);
-    markLessonComplete(item.id);
-    const tm = setTimeout(() => speak(item.word), 350);
+    markComplete({ data: { lessonId: item.id } }).catch(() => {});
+    const tm = setTimeout(() => void getTtsProvider().speak(item.word, "ta-IN"), 350);
     return () => clearTimeout(tm);
-  }, [item.id, item.word]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
 
   async function record() {
-    if (!supported) return;
+    if (!supported || !item) return;
     setListening(true);
     setFeedback(null);
     try {
-      const r = await listenOnce("ta-IN");
-      const s = scorePronunciation(item.word, r.transcript);
+      const r = await getSpeechProvider().listenOnce("ta-IN");
+      const s = await submitPron({ data: { word: item.word, transcript: r.transcript } });
       setFeedback({ score: s.pronunciation, ok: s.ok, miss: s.mispronounced });
-      recordPronunciationScore(item.word, s.pronunciation);
     } catch {
-      setFeedback({ score: 0, ok: false, miss: item.word });
+      setFeedback({ score: 0, ok: false, miss: item?.word ?? "" });
     } finally {
       setListening(false);
     }
+  }
+
+  if (!item) {
+    return (
+      <AppShell title={module === "uyir" ? t("uyir") : t("mei")}>
+        <div className="py-12 text-center text-muted-foreground">…</div>
+      </AppShell>
+    );
   }
 
   return (
@@ -82,7 +114,7 @@ function LessonScreen() {
           <div className="flex items-baseline justify-between">
             <p className="text-4xl font-black tamil">{item.word}</p>
             <button
-              onClick={() => speak(item.word)}
+              onClick={() => void getTtsProvider().speak(item.word, "ta-IN")}
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
             >
               <Volume2 className="h-4 w-4" /> {t("listen")}

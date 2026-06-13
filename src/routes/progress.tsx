@@ -1,10 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 
 import { AppShell } from "@/components/AppShell";
-import { allLessons } from "@/data/tamil";
 import { useI18n } from "@/lib/i18n";
-import { loadProgress, type ProgressData } from "@/lib/progress";
+import { getProgress } from "@/lib/progress.functions";
+
+type CompletedRow = { lesson_id: string; completed_at: string; lessons: { letter: string; word: string; module: string } | null };
+type QuizRow = { difficulty: string; score: number; total: number; taken_at: string };
+type PronRow = { word: string; accuracy: number; pronunciation: number; mispronounced: string | null; recorded_at: string };
 
 // Screen 7 + Module 8: Progress. Shows ONLY:
 // completed lessons, quiz scores, pronunciation scores.
@@ -20,16 +24,17 @@ export const Route = createFileRoute("/progress")({
 
 function ProgressScreen() {
   const { t } = useI18n();
-  const [data, setData] = useState<ProgressData | null>(null);
-  useEffect(() => setData(loadProgress()), []);
+  const fetchProgress = useServerFn(getProgress);
+  const { data, isLoading } = useQuery({ queryKey: ["progress"], queryFn: () => fetchProgress() });
 
-  if (!data) return <AppShell title={t("progress")}>…</AppShell>;
+  if (isLoading || !data) {
+    return <AppShell title={t("progress")}><div className="py-12 text-center text-muted-foreground">…</div></AppShell>;
+  }
 
-  const completedTitles = data.completedLessons
-    .map((id) => allLessons.find((l) => l.id === id))
-    .filter((x): x is NonNullable<typeof x> => Boolean(x));
-
-  const empty = completedTitles.length === 0 && data.quizScores.length === 0 && data.pronunciationScores.length === 0;
+  const completed = data.completedLessons as CompletedRow[];
+  const quizzes = data.quizScores as QuizRow[];
+  const prons = data.pronunciationScores as PronRow[];
+  const empty = completed.length === 0 && quizzes.length === 0 && prons.length === 0;
 
   return (
     <AppShell title={t("progress")}>
@@ -41,19 +46,21 @@ function ProgressScreen() {
 
       {!empty && (
         <div className="grid gap-4">
-          <Card title={t("completed_lessons")} count={completedTitles.length}>
+          <Card title={t("completed_lessons")} count={completed.length}>
             <div className="flex flex-wrap gap-2">
-              {completedTitles.map((l) => (
-                <span key={l.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-sm font-bold">
-                  <span className="tamil">{l.letter}</span> · <span className="tamil">{l.word}</span>
-                </span>
-              ))}
+              {completed.map((row) =>
+                row.lessons ? (
+                  <span key={row.lesson_id} className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-sm font-bold">
+                    <span className="tamil">{row.lessons.letter}</span> · <span className="tamil">{row.lessons.word}</span>
+                  </span>
+                ) : null,
+              )}
             </div>
           </Card>
 
-          <Card title={t("quiz_scores")} count={data.quizScores.length}>
+          <Card title={t("quiz_scores")} count={quizzes.length}>
             <ul className="space-y-1 text-sm font-semibold">
-              {data.quizScores.slice().reverse().slice(0, 10).map((q, i) => (
+              {quizzes.slice(0, 10).map((q, i) => (
                 <li key={i} className="flex items-center justify-between border-b border-border/40 py-1">
                   <span className="capitalize">{q.difficulty}</span>
                   <span>{q.score} / {q.total}</span>
@@ -62,12 +69,12 @@ function ProgressScreen() {
             </ul>
           </Card>
 
-          <Card title={t("pronunciation_scores")} count={data.pronunciationScores.length}>
+          <Card title={t("pronunciation_scores")} count={prons.length}>
             <ul className="space-y-1 text-sm font-semibold">
-              {data.pronunciationScores.slice().reverse().slice(0, 10).map((p, i) => (
+              {prons.slice(0, 10).map((p, i) => (
                 <li key={i} className="flex items-center justify-between border-b border-border/40 py-1">
                   <span className="tamil">{p.word}</span>
-                  <span>{p.score}/100</span>
+                  <span>{p.pronunciation}/100</span>
                 </li>
               ))}
             </ul>
