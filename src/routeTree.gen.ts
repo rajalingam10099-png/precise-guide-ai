@@ -9,38 +9,175 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WordBuilderRouteImport } from './routes/word-builder'
+import { Route as QuizRouteImport } from './routes/quiz'
+import { Route as PronunciationRouteImport } from './routes/pronunciation'
+import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as LanguageRouteImport } from './routes/language'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LessonModuleRouteImport } from './routes/lesson.$module'
 
+const WordBuilderRoute = WordBuilderRouteImport.update({
+  id: '/word-builder',
+  path: '/word-builder',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuizRoute = QuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PronunciationRoute = PronunciationRouteImport.update({
+  id: '/pronunciation',
+  path: '/pronunciation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LanguageRoute = LanguageRouteImport.update({
+  id: '/language',
+  path: '/language',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LessonModuleRoute = LessonModuleRouteImport.update({
+  id: '/lesson/$module',
+  path: '/lesson/$module',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
+  '/language': typeof LanguageRoute
+  '/progress': typeof ProgressRoute
+  '/pronunciation': typeof PronunciationRoute
+  '/quiz': typeof QuizRoute
+  '/word-builder': typeof WordBuilderRoute
+  '/lesson/$module': typeof LessonModuleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
+  '/language': typeof LanguageRoute
+  '/progress': typeof ProgressRoute
+  '/pronunciation': typeof PronunciationRoute
+  '/quiz': typeof QuizRoute
+  '/word-builder': typeof WordBuilderRoute
+  '/lesson/$module': typeof LessonModuleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
+  '/language': typeof LanguageRoute
+  '/progress': typeof ProgressRoute
+  '/pronunciation': typeof PronunciationRoute
+  '/quiz': typeof QuizRoute
+  '/word-builder': typeof WordBuilderRoute
+  '/lesson/$module': typeof LessonModuleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/home'
+    | '/language'
+    | '/progress'
+    | '/pronunciation'
+    | '/quiz'
+    | '/word-builder'
+    | '/lesson/$module'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/home'
+    | '/language'
+    | '/progress'
+    | '/pronunciation'
+    | '/quiz'
+    | '/word-builder'
+    | '/lesson/$module'
+  id:
+    | '__root__'
+    | '/'
+    | '/home'
+    | '/language'
+    | '/progress'
+    | '/pronunciation'
+    | '/quiz'
+    | '/word-builder'
+    | '/lesson/$module'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HomeRoute: typeof HomeRoute
+  LanguageRoute: typeof LanguageRoute
+  ProgressRoute: typeof ProgressRoute
+  PronunciationRoute: typeof PronunciationRoute
+  QuizRoute: typeof QuizRoute
+  WordBuilderRoute: typeof WordBuilderRoute
+  LessonModuleRoute: typeof LessonModuleRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/word-builder': {
+      id: '/word-builder'
+      path: '/word-builder'
+      fullPath: '/word-builder'
+      preLoaderRoute: typeof WordBuilderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quiz': {
+      id: '/quiz'
+      path: '/quiz'
+      fullPath: '/quiz'
+      preLoaderRoute: typeof QuizRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pronunciation': {
+      id: '/pronunciation'
+      path: '/pronunciation'
+      fullPath: '/pronunciation'
+      preLoaderRoute: typeof PronunciationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/language': {
+      id: '/language'
+      path: '/language'
+      fullPath: '/language'
+      preLoaderRoute: typeof LanguageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +185,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lesson/$module': {
+      id: '/lesson/$module'
+      path: '/lesson/$module'
+      fullPath: '/lesson/$module'
+      preLoaderRoute: typeof LessonModuleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HomeRoute: HomeRoute,
+  LanguageRoute: LanguageRoute,
+  ProgressRoute: ProgressRoute,
+  PronunciationRoute: PronunciationRoute,
+  QuizRoute: QuizRoute,
+  WordBuilderRoute: WordBuilderRoute,
+  LessonModuleRoute: LessonModuleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
