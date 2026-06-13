@@ -45,7 +45,7 @@ export const Route = createFileRoute("/lesson/$module")({
 
 function LessonScreen() {
   const { module } = Route.useParams();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const fetchLessons = useServerFn(listLessons);
   const markComplete = useServerFn(markLessonComplete);
   const submitPron = useServerFn(submitPronunciation);
