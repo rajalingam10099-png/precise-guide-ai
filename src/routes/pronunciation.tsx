@@ -1,12 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { Mic, Volume2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { allLessons } from "@/data/tamil";
 import { useI18n } from "@/lib/i18n";
-import { recordPronunciationScore } from "@/lib/progress";
-import { isRecognitionSupported, listenOnce, scorePronunciation, speak } from "@/lib/speech";
+import { listLessons } from "@/lib/lessons.functions";
+import { submitPronunciation } from "@/lib/pronunciation.functions";
+import { getSpeechProvider } from "@/services/speech";
+import { getTtsProvider } from "@/services/tts";
+
+type LessonItem = { id: string; word: string; english: string; hindi: string; emoji: string };
 
 // Screen 5 + Module 4: Pronunciation Checker.
 // Output per spec: Accuracy Score, Pronunciation Score, Mispronounced Portion, Correction Feedback.
@@ -22,33 +27,44 @@ export const Route = createFileRoute("/pronunciation")({
 
 function PronunciationScreen() {
   const { t } = useI18n();
+  const fetchLessons = useServerFn(listLessons);
+  const submit = useServerFn(submitPronunciation);
+  const { data: allLessons = [] } = useQuery({ queryKey: ["lessons"], queryFn: () => fetchLessons() });
+  const items = allLessons as LessonItem[];
   const [idx, setIdx] = useState(0);
-  const item = allLessons[idx];
+  const item = items[idx];
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
   const [result, setResult] = useState<{ accuracy: number; pronunciation: number; mispronounced: string; transcript: string } | null>(null);
 
-  useEffect(() => setSupported(isRecognitionSupported()), []);
+  useEffect(() => setSupported(getSpeechProvider().isSupported()), []);
 
   function nextWord() {
-    setIdx((i) => (i + 1) % allLessons.length);
+    setIdx((i) => (items.length === 0 ? 0 : (i + 1) % items.length));
     setResult(null);
   }
 
   async function record() {
-    if (!supported) return;
+    if (!supported || !item) return;
     setListening(true);
     setResult(null);
     try {
-      const r = await listenOnce("ta-IN");
-      const s = scorePronunciation(item.word, r.transcript);
-      setResult({ accuracy: s.accuracy, pronunciation: s.pronunciation, mispronounced: s.mispronounced, transcript: r.transcript });
-      recordPronunciationScore(item.word, s.pronunciation);
+      const r = await getSpeechProvider().listenOnce("ta-IN");
+      const s = await submit({ data: { word: item.word, transcript: r.transcript } });
+      setResult({ accuracy: s.accuracy, pronunciation: s.pronunciation, mispronounced: s.mispronounced, transcript: s.transcript });
     } catch {
-      setResult({ accuracy: 0, pronunciation: 0, mispronounced: item.word, transcript: "" });
+      setResult({ accuracy: 0, pronunciation: 0, mispronounced: item?.word ?? "", transcript: "" });
     } finally {
       setListening(false);
     }
+  }
+
+  if (!item) {
+    return (
+      <AppShell title={t("pronunciation")}>
+        <div className="py-12 text-center text-muted-foreground">…</div>
+      </AppShell>
+    );
   }
 
   return (
@@ -63,7 +79,7 @@ function PronunciationScreen() {
         </p>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => speak(item.word)} className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-bold">
+          <button onClick={() => void getTtsProvider().speak(item.word, "ta-IN")} className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-bold">
             <Volume2 className="h-4 w-4" /> {t("listen")}
           </button>
           <button

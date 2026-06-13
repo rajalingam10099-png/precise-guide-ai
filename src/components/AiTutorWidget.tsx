@@ -3,7 +3,7 @@ import { Sparkles, Send, X, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/lib/i18n";
-import { speak } from "@/lib/speech";
+import { getTtsProvider } from "@/services/tts";
 import { askTutor } from "@/lib/tutor.functions";
 
 type Msg = { role: "tutor" | "user"; text: string };
@@ -77,7 +77,7 @@ export function AiTutorWidget({ context }: { context?: string }) {
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   {m.role === "tutor" && (
                     <button
-                      onClick={() => speak(m.text, lang === "hi" ? "hi-IN" : "ta-IN")}
+                      onClick={() => void getTtsProvider().speak(m.text, lang === "hi" ? "hi-IN" : "ta-IN")}
                       className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-tutor"
                     >
                       <Volume2 className="h-3 w-3" /> {t("listen")}
